@@ -1,6 +1,8 @@
 package com.java.dbutil;
 
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -69,7 +71,6 @@ public class DbCrudOperations{
 		        Statement stmt = conn.createStatement();
 		        String sql;
 		        sql = "INSERT INTO product_survey_details VALUES('"+product.getStore()+"','"+product.getBarcode()+"',"+product.getPrice()+",'"+product.getNotes()+"')";
-		        System.out.println("SqlStatement:"+sql);
 		        stmt.executeUpdate(sql);
 		        return true;
 	      }//end try
@@ -84,7 +85,6 @@ public class DbCrudOperations{
 		     try
 		     {
 			   String query="SELECT MIN(price),MAX(price),AVG(price) FROM product_survey_details WHERE productbarcode="+productbarcode;
-   			   System.out.println(query);
    			   float idealprice=calculateIdealPrice(productbarcode);
 			   ResultSet rs =DbCrudOperations.selectQuery(query);
 				Map<String,Float> hashmap=new HashMap<>();
@@ -108,29 +108,24 @@ public class DbCrudOperations{
 		}
 		
 
-	public float calculateIdealPrice(String prodcutbarcode)
+	public float calculateIdealPrice(String productbarcode)
 	{
 		try
 	     {
-		   String query="SELECT price FROM `product_survey_details` WHERE productbarcode="+prodcutbarcode+" ORDER BY price DESC";
+		   String query="SELECT AVG(price)+AVG(price)/100*20 FROM product_survey_details"
+	       +" WHERE productbarcode="+productbarcode 
+	       +" AND price<(SELECT price FROM `product_survey_details` WHERE productbarcode="+productbarcode+" ORDER BY price DESC LIMIT 1,1)"
+	       +" AND price>(SELECT price FROM `product_survey_details` WHERE productbarcode="+productbarcode+" ORDER BY price ASC LIMIT 1,1)"
+	       +" ORDER BY price DESC";
+			   
 		   ResultSet rs =DbCrudOperations.selectQuery(query);
 		   Map<Integer,Float> hashmap=new HashMap<>();
 		 	if(rs!=null)
-			{
-		 	   int i=0;
+			{		 	   
 			   while(rs.next())
 				{
-				   hashmap.put(i,rs.getFloat("price"));
-				   i++;
+				  return rs.getFloat("AVG(price)+AVG(price)/100*20");
 				}
-			   float total=0;
-			   for(i=2;i<hashmap.size()-2;i++)
-			   {
-				   total=total+hashmap.get(i);
-			   }
-			   Float idealPrice=total/(i-2)+(total/(i-2)/100)*20;
-			   System.out.println("idealPrice:"+idealPrice);
-			   return idealPrice;
 			}
 	     }//end try
 	     catch(Exception e)
